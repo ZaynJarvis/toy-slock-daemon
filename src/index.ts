@@ -58,6 +58,8 @@ export function summarizeIncomingMessage(msg: { type: string; [key: string]: unk
       const m = msg as any;
       return `(agent=${m.agentId}, runtime=${m.runtime || 'auto'})`;
     }
+    case 'machine:workspace:scan':
+      return '';
     case 'machine:workspace:delete': {
       const m = msg as any;
       return `(directory=${m.directoryName})`;
@@ -203,6 +205,11 @@ connection = new DaemonConnection({
         agentManager.stopAgent(msg.agentId);
         break;
 
+      case 'agent:reset-workspace':
+        logger.info(`[Agent ${msg.agentId}] Workspace reset requested`);
+        agentManager.resetWorkspace(msg.agentId);
+        break;
+
       case 'agent:deliver':
         logger.info(
           `[Agent ${msg.agentId}] Delivery received (seq=${msg.seq}, from=@${msg.message.sender_name}, target=${formatChannelTarget(msg)})`,
@@ -225,11 +232,11 @@ connection = new DaemonConnection({
         break;
 
       case 'agent:workspace:read':
-        agentManager.readFile(msg.agentId, msg.path).then((result) => {
-          connection.send({ type: 'agent:workspace:file_content', agentId: msg.agentId, requestId: msg.requestId, content: result.content });
+        agentManager.readFile(msg.agentId, msg.path).then(({ content, binary }) => {
+          connection.send({ type: 'agent:workspace:file_content', agentId: msg.agentId, requestId: msg.requestId, content, binary });
         }).catch((err: unknown) => {
           logger.error(`[Agent ${msg.agentId}] workspace:read failed (path=${msg.path})`, err);
-          connection.send({ type: 'agent:workspace:file_content', agentId: msg.agentId, requestId: msg.requestId, content: null, error: String(err) });
+          connection.send({ type: 'agent:workspace:file_content', agentId: msg.agentId, requestId: msg.requestId, content: null, binary: false });
         });
         break;
 
@@ -242,21 +249,23 @@ connection = new DaemonConnection({
         });
         break;
 
-      case 'machine:workspace:list':
-        agentManager.scanAllWorkspaces().then((workspaces) => {
-          connection.send({ type: 'machine:workspace:list:result', workspaces });
+      case 'machine:workspace:scan':
+        logger.info('[Daemon] Scanning all workspace directories');
+        agentManager.scanAllWorkspaces().then((directories) => {
+          connection.send({ type: 'machine:workspace:scan_result', directories });
         }).catch((err: unknown) => {
-          logger.error('[Daemon] machine:workspace:list failed', err);
-          connection.send({ type: 'machine:workspace:list:result', workspaces: [] });
+          logger.error('[Daemon] machine:workspace:scan failed', err);
+          connection.send({ type: 'machine:workspace:scan_result', directories: [] });
         });
         break;
 
       case 'machine:workspace:delete':
+        logger.info(`[Daemon] Deleting workspace directory: ${msg.directoryName}`);
         agentManager.deleteWorkspaceDirectory(msg.directoryName).then((success) => {
-          connection.send({ type: 'machine:workspace:delete:result', directoryName: msg.directoryName, success });
+          connection.send({ type: 'machine:workspace:delete_result', directoryName: msg.directoryName, success });
         }).catch((err: unknown) => {
           logger.error(`[Daemon] machine:workspace:delete failed (dir=${msg.directoryName})`, err);
-          connection.send({ type: 'machine:workspace:delete:result', directoryName: msg.directoryName, success: false });
+          connection.send({ type: 'machine:workspace:delete_result', directoryName: msg.directoryName, success: false });
         });
         break;
 
