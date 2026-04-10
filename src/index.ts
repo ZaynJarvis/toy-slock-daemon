@@ -219,6 +219,7 @@ connection = new DaemonConnection({
         agentManager.getFileTree(msg.agentId, msg.dirPath).then((files) => {
           connection.send({ type: 'agent:workspace:file_tree', agentId: msg.agentId, dirPath: msg.dirPath, files });
         }).catch((err: unknown) => {
+          logger.error(`[Agent ${msg.agentId}] workspace:list failed`, err);
           connection.send({ type: 'agent:workspace:file_tree', agentId: msg.agentId, dirPath: msg.dirPath, files: [], error: String(err) });
         });
         break;
@@ -227,6 +228,7 @@ connection = new DaemonConnection({
         agentManager.readFile(msg.agentId, msg.path).then((result) => {
           connection.send({ type: 'agent:workspace:file_content', agentId: msg.agentId, requestId: msg.requestId, content: result.content });
         }).catch((err: unknown) => {
+          logger.error(`[Agent ${msg.agentId}] workspace:read failed (path=${msg.path})`, err);
           connection.send({ type: 'agent:workspace:file_content', agentId: msg.agentId, requestId: msg.requestId, content: null, error: String(err) });
         });
         break;
@@ -235,6 +237,7 @@ connection = new DaemonConnection({
         agentManager.listSkills(msg.agentId, msg.runtime).then((skills) => {
           connection.send({ type: 'agent:skills:list_result', agentId: msg.agentId, ...skills });
         }).catch((err: unknown) => {
+          logger.error(`[Agent ${msg.agentId}] skills:list failed`, err);
           connection.send({ type: 'agent:skills:list_result', agentId: msg.agentId, global: [], workspace: [], error: String(err) });
         });
         break;
@@ -242,7 +245,8 @@ connection = new DaemonConnection({
       case 'machine:workspace:list':
         agentManager.scanAllWorkspaces().then((workspaces) => {
           connection.send({ type: 'machine:workspace:list:result', workspaces });
-        }).catch(() => {
+        }).catch((err: unknown) => {
+          logger.error('[Daemon] machine:workspace:list failed', err);
           connection.send({ type: 'machine:workspace:list:result', workspaces: [] });
         });
         break;
@@ -250,9 +254,14 @@ connection = new DaemonConnection({
       case 'machine:workspace:delete':
         agentManager.deleteWorkspaceDirectory(msg.directoryName).then((success) => {
           connection.send({ type: 'machine:workspace:delete:result', directoryName: msg.directoryName, success });
-        }).catch(() => {
+        }).catch((err: unknown) => {
+          logger.error(`[Daemon] machine:workspace:delete failed (dir=${msg.directoryName})`, err);
           connection.send({ type: 'machine:workspace:delete:result', directoryName: msg.directoryName, success: false });
         });
+        break;
+
+      default:
+        logger.warn(`[Daemon] Unhandled message type: ${msg.type} — ${JSON.stringify(msg).slice(0, 500)}`);
         break;
     }
   },
