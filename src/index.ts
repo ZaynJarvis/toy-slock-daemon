@@ -217,25 +217,25 @@ connection = new DaemonConnection({
 
       case 'agent:workspace:list':
         agentManager.getFileTree(msg.agentId, msg.dirPath).then((files) => {
-          connection.send({ type: 'agent:workspace:list:result', agentId: msg.agentId, files });
+          connection.send({ type: 'agent:workspace:file_tree', agentId: msg.agentId, dirPath: msg.dirPath, files });
         }).catch((err: unknown) => {
-          connection.send({ type: 'agent:workspace:list:result', agentId: msg.agentId, files: [], error: String(err) });
+          connection.send({ type: 'agent:workspace:file_tree', agentId: msg.agentId, dirPath: msg.dirPath, files: [], error: String(err) });
         });
         break;
 
       case 'agent:workspace:read':
         agentManager.readFile(msg.agentId, msg.path).then((result) => {
-          connection.send({ type: 'agent:workspace:read:result', agentId: msg.agentId, path: msg.path, ...result });
+          connection.send({ type: 'agent:workspace:file_content', agentId: msg.agentId, requestId: msg.requestId, content: result.content });
         }).catch((err: unknown) => {
-          connection.send({ type: 'agent:workspace:read:result', agentId: msg.agentId, path: msg.path, content: null, error: String(err) });
+          connection.send({ type: 'agent:workspace:file_content', agentId: msg.agentId, requestId: msg.requestId, content: null, error: String(err) });
         });
         break;
 
       case 'agent:skills:list':
         agentManager.listSkills(msg.agentId, msg.runtime).then((skills) => {
-          connection.send({ type: 'agent:skills:list:result', agentId: msg.agentId, ...skills });
+          connection.send({ type: 'agent:skills:list_result', agentId: msg.agentId, ...skills });
         }).catch((err: unknown) => {
-          connection.send({ type: 'agent:skills:list:result', agentId: msg.agentId, global: [], workspace: [], error: String(err) });
+          connection.send({ type: 'agent:skills:list_result', agentId: msg.agentId, global: [], workspace: [], error: String(err) });
         });
         break;
 
