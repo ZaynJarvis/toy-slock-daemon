@@ -1,9 +1,49 @@
 import WebSocket from 'ws';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 import { logger } from './logger.js';
+
+// ---------------------------------------------------------------------------
+// Proxy helpers (cherry-picked from Cloner's clone)
+// ---------------------------------------------------------------------------
+
+function getEnvCaseInsensitive(env: Record<string, string | undefined>, key: string): string | undefined {
+  return env[key] ?? env[key.toLowerCase()] ?? env[key.toUpperCase()];
+}
+
+function shouldBypassProxy(wsUrl: string, env: Record<string, string | undefined>): boolean {
+  const noProxy = getEnvCaseInsensitive(env, 'NO_PROXY');
+  if (!noProxy) return false;
+  const hostname = new URL(wsUrl).hostname;
+  for (const entry of noProxy.split(',').map((e) => e.trim()).filter(Boolean)) {
+    if (entry === '*') return true;
+    if (hostname === entry) return true;
+    if (entry.startsWith('.') && hostname.endsWith(entry)) return true;
+  }
+  return false;
+}
+
+function getProxyUrlForWebSocket(wsUrl: string, env: Record<string, string | undefined>): string | undefined {
+  if (shouldBypassProxy(wsUrl, env)) return undefined;
+  const isSecure = wsUrl.startsWith('wss:');
+  if (isSecure) {
+    return getEnvCaseInsensitive(env, 'WSS_PROXY') ?? getEnvCaseInsensitive(env, 'HTTPS_PROXY');
+  }
+  return getEnvCaseInsensitive(env, 'HTTP_PROXY') ?? getEnvCaseInsensitive(env, 'ALL_PROXY');
+}
+
+function buildWebSocketOptions(wsUrl: string, env: Record<string, string | undefined>): { agent: HttpsProxyAgent<string> } | undefined {
+  const proxyUrl = getProxyUrlForWebSocket(wsUrl, env);
+  if (!proxyUrl) return undefined;
+  logger.info(`[Daemon] Using proxy: ${proxyUrl}`);
+  return { agent: new HttpsProxyAgent(proxyUrl) };
+}
+
+// ---------------------------------------------------------------------------
 
 export interface ConnectionOptions {
   serverUrl: string;
   apiKey: string;
+  proxyEnv?: Record<string, string | undefined>;
   onConnect: () => void;
   onMessage: (msg: any) => void;
   onDisconnect: () => void;
@@ -70,7 +110,8 @@ export class DaemonConnection {
     const wsUrl = this.options.serverUrl.replace(/^http/, 'ws') + `/daemon/connect?key=${this.options.apiKey}`;
     logger.info(`[Daemon] Connecting to ${this.options.serverUrl}...`);
 
-    const ws = new WebSocket(wsUrl);
+    const proxyOpts = buildWebSocketOptions(wsUrl, this.options.proxyEnv ?? process.env as Record<string, string | undefined>);
+    const ws = new WebSocket(wsUrl, proxyOpts);
     this.ws = ws;
 
     ws.on('open', () => {
