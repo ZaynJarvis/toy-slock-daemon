@@ -150,7 +150,7 @@ connection = new DaemonConnection({
 
     connection.send({
       type: 'ready',
-      capabilities: ['agent:start', 'agent:stop', 'agent:deliver', 'workspace:files'],
+      capabilities: ['agent:start', 'agent:stop', 'agent:deliver', 'workspace:files', 'workspace:list', 'workspace:read', 'skills:list'],
       runtimes,
       runningAgents: agentManager.getRunningAgentIds(),
       hostname: os.hostname(),
@@ -215,7 +215,45 @@ connection = new DaemonConnection({
         connection.send({ type: 'pong' });
         break;
 
-      // workspace/skills handlers omitted for toy-slock
+      case 'agent:workspace:list':
+        agentManager.getFileTree(msg.agentId, msg.dirPath).then((files) => {
+          connection.send({ type: 'agent:workspace:list:result', agentId: msg.agentId, files });
+        }).catch((err: unknown) => {
+          connection.send({ type: 'agent:workspace:list:result', agentId: msg.agentId, files: [], error: String(err) });
+        });
+        break;
+
+      case 'agent:workspace:read':
+        agentManager.readFile(msg.agentId, msg.path).then((result) => {
+          connection.send({ type: 'agent:workspace:read:result', agentId: msg.agentId, path: msg.path, ...result });
+        }).catch((err: unknown) => {
+          connection.send({ type: 'agent:workspace:read:result', agentId: msg.agentId, path: msg.path, content: null, error: String(err) });
+        });
+        break;
+
+      case 'agent:skills:list':
+        agentManager.listSkills(msg.agentId, msg.runtime).then((skills) => {
+          connection.send({ type: 'agent:skills:list:result', agentId: msg.agentId, ...skills });
+        }).catch((err: unknown) => {
+          connection.send({ type: 'agent:skills:list:result', agentId: msg.agentId, global: [], workspace: [], error: String(err) });
+        });
+        break;
+
+      case 'machine:workspace:list':
+        agentManager.scanAllWorkspaces().then((workspaces) => {
+          connection.send({ type: 'machine:workspace:list:result', workspaces });
+        }).catch(() => {
+          connection.send({ type: 'machine:workspace:list:result', workspaces: [] });
+        });
+        break;
+
+      case 'machine:workspace:delete':
+        agentManager.deleteWorkspaceDirectory(msg.directoryName).then((success) => {
+          connection.send({ type: 'machine:workspace:delete:result', directoryName: msg.directoryName, success });
+        }).catch(() => {
+          connection.send({ type: 'machine:workspace:delete:result', directoryName: msg.directoryName, success: false });
+        });
+        break;
     }
   },
 
