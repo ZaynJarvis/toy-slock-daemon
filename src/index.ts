@@ -12,10 +12,13 @@ import { logger } from './logger.js';
 const require2 = createRequire(import.meta.url);
 const DAEMON_VERSION: string = require2('../package.json').version;
 
+// Kimi slot shimmed to Hermes binary (set SLOCK_KIMI_DRIVER=native to restore)
+const KIMI_BINARY = process.env.SLOCK_KIMI_DRIVER === 'native' ? 'kimi' : 'hermes';
+
 const RUNTIMES = [
   { id: 'claude', displayName: 'Claude Code', binary: 'claude' },
   { id: 'codex', displayName: 'Codex CLI', binary: 'codex' },
-  { id: 'kimi', displayName: 'Kimi CLI', binary: 'kimi' },
+  { id: 'kimi', displayName: 'Kimi CLI (Hermes)', binary: KIMI_BINARY },
   { id: 'gemini', displayName: 'Gemini CLI', binary: 'gemini' },
   { id: 'hermes', displayName: 'Hermes Agent', binary: 'hermes' },
 ];
