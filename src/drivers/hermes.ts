@@ -36,8 +36,8 @@ export class HermesDriver implements Driver {
       copyFileSync(globalAuth, localAuth);
     }
 
-    // Symlink shared read-only resources from global ~/.hermes
-    const symlinkTargets = ['SOUL.md', 'skills', '.skills_prompt_snapshot.json', 'memories'];
+    // Symlink shared read-only resources from global ~/.hermes (excluding SOUL.md — written per-agent below)
+    const symlinkTargets = ['skills', '.skills_prompt_snapshot.json', 'memories'];
     for (const name of symlinkTargets) {
       const globalPath = path.join(globalHermes, name);
       const localPath = path.join(hermesHome, name);
@@ -54,6 +54,12 @@ export class HermesDriver implements Driver {
         }
       }
     }
+
+    // Write per-agent SOUL.md with daemon system prompt so Hermes treats
+    // etiquette/reply rules as system-level instructions (not user message).
+    // Overwritten every spawn to stay in sync with buildSystemPrompt().
+    const soulPath = path.join(hermesHome, 'SOUL.md');
+    writeFileSync(soulPath, this.buildSystemPrompt(ctx.config, ctx.agentId), 'utf8');
 
     // Build bridge invocation (mirrors Codex/Claude pattern)
     const isTsSource = ctx.chatBridgePath.endsWith('.ts');
@@ -79,10 +85,17 @@ export class HermesDriver implements Driver {
       baseConfig = baseConfig.replace(/^mcp_servers:\n(?:[ \t]+.*\n)*/m, '');
     }
 
+    // Pick a fallback model on a different provider so 429 on primary doesn't kill the agent
+    const fallbackModel = provider === 'gemini' ? 'gpt-5.4' : 'gemini-2.5-flash';
+    const fallbackProvider = provider === 'gemini' ? 'openai-codex' : 'gemini';
+
     const overrides = [
       'model:',
       `  default: ${model}`,
       `  provider: ${provider}`,
+      'fallback_model:',
+      `  provider: ${fallbackProvider}`,
+      `  model: ${fallbackModel}`,
       'mcp_servers:',
       '  chat:',
       `    command: ${JSON.stringify(bridgeCommand)}`,

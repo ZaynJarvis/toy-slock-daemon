@@ -25,12 +25,19 @@ import {
   pushRecentStderr,
 } from './types.js';
 
+/** Max consecutive crash retries before marking inactive */
+const MAX_CRASH_RETRIES = 3;
+/** Base delay (ms) for exponential backoff on crash retry */
+const CRASH_RETRY_BASE_MS = 5_000;
+
 export class AgentProcessManager {
   agents: Map<string, AgentProcess> = new Map();
   agentsStarting: Set<string> = new Set();
   startingInboxes: Map<string, any[]> = new Map();
   /** Cached configs for agents whose process exited normally — enables auto-restart on next message */
   idleAgentConfigs: Map<string, IdleAgentEntry> = new Map();
+  /** Consecutive crash count per agent — reset on successful exit (code 0) */
+  private crashRetries: Map<string, number> = new Map();
 
   private chatBridgePath: string;
   private sendToServer: (msg: any) => void;
@@ -234,6 +241,9 @@ export class AgentProcessManager {
           const finalSignal = ap.exitSignal ?? (signal as string | null);
 
           if (finalCode === 0) {
+            // Successful turn — reset crash counter
+            this.crashRetries.delete(agentId);
+
             const queuedWakeMessage = !ap.driver.supportsStdinNotification
               ? ap.inbox.shift()
               : undefined;
@@ -297,9 +307,40 @@ export class AgentProcessManager {
               return;
             }
 
-            logger.error(`[Agent ${agentId}] Process crashed (${reason}) \u2014 marking inactive`);
-            this.sendAgentStatus(agentId, 'inactive', ap.launchId);
-            this.broadcastActivity(agentId, 'offline', `Crashed (${summary})`);
+            // Retry crashed agents with exponential backoff (up to MAX_CRASH_RETRIES)
+            const retryCount = (this.crashRetries.get(agentId) || 0) + 1;
+            this.crashRetries.set(agentId, retryCount);
+
+            if (retryCount <= MAX_CRASH_RETRIES) {
+              const delayMs = CRASH_RETRY_BASE_MS * Math.pow(2, retryCount - 1); // 5s, 10s, 20s
+              logger.warn(
+                `[Agent ${agentId}] Process crashed (${reason}) — retry ${retryCount}/${MAX_CRASH_RETRIES} in ${delayMs / 1000}s`,
+              );
+              this.broadcastActivity(agentId, 'working', `Crashed — retrying in ${delayMs / 1000}s (attempt ${retryCount}/${MAX_CRASH_RETRIES})`);
+
+              // Cache idle state so delivery can still reach this agent during backoff
+              this.idleAgentConfigs.set(agentId, {
+                config: { ...ap.config, sessionId: ap.sessionId },
+                sessionId: ap.sessionId,
+                launchId: ap.launchId,
+              });
+
+              setTimeout(() => {
+                const restartConfig = { ...ap.config, sessionId: ap.sessionId };
+                this.idleAgentConfigs.delete(agentId);
+                this.startAgent(agentId, restartConfig, undefined, undefined, undefined, ap.launchId || undefined).catch((err) => {
+                  logger.error(`[Agent ${agentId}] Crash retry ${retryCount} failed`, err);
+                  this.crashRetries.delete(agentId);
+                  this.sendAgentStatus(agentId, 'inactive', ap.launchId);
+                  this.broadcastActivity(agentId, 'offline', `Crashed (${summary})`);
+                });
+              }, delayMs);
+            } else {
+              this.crashRetries.delete(agentId);
+              logger.error(`[Agent ${agentId}] Process crashed (${reason}) — exhausted ${MAX_CRASH_RETRIES} retries, marking inactive`);
+              this.sendAgentStatus(agentId, 'inactive', ap.launchId);
+              this.broadcastActivity(agentId, 'offline', `Crashed (${summary})`);
+            }
           }
         }
       });
