@@ -6,7 +6,8 @@ import { buildBaseSystemPrompt } from './systemPrompt.js';
 
 function inferProvider(model: string | undefined): string {
   if (!model) return 'anthropic';
-  if (model.startsWith('gpt-') || /^o\d/.test(model)) return 'openai';
+  if (model.startsWith('gemini-') || model.startsWith('google/')) return 'gemini';
+  if (model.startsWith('gpt-') || /^o\d/.test(model)) return 'openai-codex';
   return 'anthropic';
 }
 
