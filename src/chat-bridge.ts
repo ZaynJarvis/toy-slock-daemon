@@ -462,12 +462,24 @@ server.tool(
       .describe(
         "Optional target to scope the search, e.g. '#general', 'dm:@richard', '#general:abcd1234'"
       ),
+    sender_id: z
+      .string()
+      .optional()
+      .describe("Optional exact sender id filter."),
+    after: z
+      .string()
+      .optional()
+      .describe("Optional inclusive ISO datetime lower bound for message created_at."),
+    before: z
+      .string()
+      .optional()
+      .describe("Optional inclusive ISO datetime upper bound for message created_at."),
     limit: z
       .number()
       .default(10)
       .describe("Max number of search results to return (default 10, max 20)"),
   },
-  async ({ query, channel, limit }) => {
+  async ({ query, channel, sender_id, after, before, limit }) => {
     try {
       const trimmed = query.trim();
       if (!trimmed) {
@@ -480,6 +492,9 @@ server.tool(
       params.set("q", trimmed);
       params.set("limit", String(Math.min(limit, 20)));
       if (channel) params.set("channel", channel);
+      if (sender_id) params.set("senderId", sender_id);
+      if (after) params.set("after", after);
+      if (before) params.set("before", before);
 
       const res = await fetch(`${serverUrl}/internal/agent/${agentId}/search?${params}`, {
         method: "GET",

@@ -16,6 +16,7 @@ const RUNTIMES = [
   { id: 'claude', displayName: 'Claude Code', binary: 'claude' },
   { id: 'codex', displayName: 'Codex CLI', binary: 'codex' },
   { id: 'kimi', displayName: 'Kimi CLI', binary: 'kimi' },
+  { id: 'gemini', displayName: 'Gemini CLI', binary: 'gemini' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -152,7 +153,7 @@ connection = new DaemonConnection({
 
     connection.send({
       type: 'ready',
-      capabilities: ['agent:start', 'agent:stop', 'agent:deliver', 'workspace:files', 'workspace:list', 'workspace:read', 'skills:list'],
+      capabilities: ['agent:start', 'agent:stop', 'agent:deliver', 'workspace:files'],
       runtimes,
       runningAgents: agentManager.getRunningAgentIds(),
       hostname: os.hostname(),
@@ -222,12 +223,17 @@ connection = new DaemonConnection({
         connection.send({ type: 'pong' });
         break;
 
+      case 'agent:reset-workspace':
+        logger.info(`[Agent ${msg.agentId}] Workspace reset requested`);
+        agentManager.resetWorkspace(msg.agentId);
+        break;
+
       case 'agent:workspace:list':
         agentManager.getFileTree(msg.agentId, msg.dirPath).then((files) => {
-          connection.send({ type: 'agent:workspace:file_tree', agentId: msg.agentId, dirPath: msg.dirPath, files });
+          connection.send({ type: 'agent:workspace:file_tree', agentId: msg.agentId, files, dirPath: msg.dirPath });
         }).catch((err: unknown) => {
           logger.error(`[Agent ${msg.agentId}] workspace:list failed`, err);
-          connection.send({ type: 'agent:workspace:file_tree', agentId: msg.agentId, dirPath: msg.dirPath, files: [], error: String(err) });
+          connection.send({ type: 'agent:workspace:file_tree', agentId: msg.agentId, files: [], dirPath: msg.dirPath, error: String(err) });
         });
         break;
 
@@ -241,11 +247,11 @@ connection = new DaemonConnection({
         break;
 
       case 'agent:skills:list':
-        agentManager.listSkills(msg.agentId, msg.runtime).then((skills) => {
-          connection.send({ type: 'agent:skills:list_result', agentId: msg.agentId, ...skills });
+        agentManager.listSkills(msg.agentId, msg.runtime).then(({ global, workspace }) => {
+          connection.send({ type: 'agent:skills:list_result', agentId: msg.agentId, global, workspace });
         }).catch((err: unknown) => {
-          logger.error(`[Agent ${msg.agentId}] skills:list failed`, err);
-          connection.send({ type: 'agent:skills:list_result', agentId: msg.agentId, global: [], workspace: [], error: String(err) });
+          logger.error(`[Daemon] Failed to list skills for ${msg.agentId}`, err);
+          connection.send({ type: 'agent:skills:list_result', agentId: msg.agentId, global: [], workspace: [] });
         });
         break;
 
