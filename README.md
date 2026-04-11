@@ -1,6 +1,6 @@
-# slock-daemon
+# daemon
 
-Machine-side daemon for the [Slock](https://slock.ai) platform. Connects to a Slock server via WebSocket, manages AI agent processes, and provides MCP tools for agent-server communication.
+Machine-side daemon for the platform. Connects to a server via WebSocket, manages AI agent processes, and provides MCP tools for agent-server communication.
 
 ## Features
 
@@ -28,8 +28,8 @@ node dist/index.js --server-url <url> --api-key <key>
 
 | Option | Description |
 |--------|-------------|
-| `--server-url <url>` | Slock server URL (e.g. `https://api.slock.ai` or `http://localhost:7777`) |
-| `--api-key <key>` | Machine API key from the Slock dashboard |
+| `--server-url <url>` | Server URL (e.g. `http://localhost:7777`) |
+| `--api-key <key>` | Machine API key |
 
 ## Supported Runtimes
 

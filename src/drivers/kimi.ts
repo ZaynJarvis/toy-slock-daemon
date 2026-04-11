@@ -99,7 +99,7 @@ export class KimiDriver implements Driver {
         method: 'initialize',
         params: {
           protocol_version: KIMI_WIRE_PROTOCOL_VERSION,
-          client: { name: 'slock-daemon', version: '1.0.0' },
+          client: { name: 'daemon', version: '1.0.0' },
           capabilities: {
             supports_question: false,
             supports_plan_mode: false,

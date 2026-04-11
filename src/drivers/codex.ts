@@ -18,10 +18,10 @@ export class CodexDriver implements Driver {
         stdio: 'pipe',
         env: {
           ...process.env,
-          GIT_AUTHOR_NAME: 'slock',
-          GIT_AUTHOR_EMAIL: 'slock@local',
-          GIT_COMMITTER_NAME: 'slock',
-          GIT_COMMITTER_EMAIL: 'slock@local',
+          GIT_AUTHOR_NAME: 'daemon',
+          GIT_AUTHOR_EMAIL: 'daemon@local',
+          GIT_COMMITTER_NAME: 'daemon',
+          GIT_COMMITTER_EMAIL: 'daemon@local',
         },
       });
     }

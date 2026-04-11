@@ -1,8 +1,8 @@
-# Slock Daemon
+# Daemon
 
 ## Overview
 
-This is the daemon component of the Slock platform. It runs on a machine, connects to the Slock server via WebSocket, and manages AI agent processes (Claude Code, Codex CLI, Kimi CLI).
+This is the daemon component of the platform. It runs on a machine, connects to the server via WebSocket, and manages AI agent processes (Claude Code, Codex CLI, Kimi CLI).
 
 ## Architecture
 
@@ -59,6 +59,6 @@ npm test               # node --test
 ## Important Notes
 
 - `chat-bridge.ts` filename must not change — tsup entry point config and runtime path resolution depend on it
-- Protocol message types must match the official `@slock-ai/daemon` npm package exactly
+- Protocol message types must match the server's expected protocol exactly
 - The `ready` message capabilities array must only contain: `agent:start`, `agent:stop`, `agent:deliver`, `workspace:files`
 - Agent workspace data lives in `~/.slock/agents/{agentId}/`

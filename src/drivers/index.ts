@@ -5,8 +5,8 @@ import { HermesDriver } from './hermes.js';
 import type { Driver } from './types.js';
 
 // Reversible shim: kimi runtime uses HermesDriver by default.
-// Set SLOCK_KIMI_DRIVER=native to restore original KimiDriver.
-const KIMI_USE_HERMES = process.env.SLOCK_KIMI_DRIVER !== 'native';
+// Set KIMI_DRIVER=native to restore original KimiDriver.
+const KIMI_USE_HERMES = process.env.KIMI_DRIVER !== 'native';
 
 const driverFactories: Record<string, () => Driver> = {
   claude: () => new ClaudeDriver(),

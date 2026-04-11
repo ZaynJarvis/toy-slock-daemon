@@ -696,7 +696,7 @@ server.tool(
   {
     channel: z
       .string()
-      .describe("The channel whose task board to view — e.g. '#engineering', '#proj-slock'"),
+      .describe("The channel whose task board to view — e.g. '#engineering', '#general'"),
     status: z
       .enum(["all", "todo", "in_progress", "in_review", "done"])
       .default("all")

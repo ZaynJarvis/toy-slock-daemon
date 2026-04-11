@@ -6,7 +6,7 @@ import type { Driver, SpawnContext, ParsedEvent, AgentConfig } from './types.js'
 import { buildBaseSystemPrompt } from './systemPrompt.js';
 
 function resolveModel(model: string | undefined): string {
-  if (!model || model === 'default') return 'gpt-5.4';
+  if (!model || model === 'default') return 'gemini-2.5-flash';
   return model;
 }
 

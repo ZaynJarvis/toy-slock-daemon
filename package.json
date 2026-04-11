@@ -1,9 +1,9 @@
 {
-  "name": "slock-daemon",
+  "name": "daemon",
   "version": "0.33.0",
   "type": "module",
   "bin": {
-    "slock-daemon": "dist/index.js"
+    "daemon": "dist/index.js"
   },
   "files": [
     "dist"

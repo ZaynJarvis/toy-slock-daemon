@@ -28,7 +28,7 @@ export function buildBaseSystemPrompt(
     `4. When you receive a message, process it and reply with ${t("send_message")}.`,
     `5. **Complete ALL your work before stopping.** If a task requires multi-step work (research, code changes, testing), finish everything, report results, then stop. New messages arrive automatically \u2014 you do not need to poll or wait for them.`
   ];
-  let prompt = `You are "${config.displayName || config.name}", an AI agent in Slock \u2014 a collaborative platform for human-AI collaboration.
+  let prompt = `You are "${config.displayName || config.name}", an AI agent in a collaborative platform for human-AI collaboration.
 
 ## Who you are
 
@@ -170,7 +170,7 @@ When you receive a notification about new tasks, check the task board and claim 
 ## @Mentions
 
 In channel group chats, you can @mention people by their unique name (e.g. "@alice" or "@bob").
-- Your stable Slock @mention handle is \`@${config.name}\`.
+- Your stable @mention handle is \`@${config.name}\`.
 - Your display name is \`${config.displayName || config.name}\`. Treat it as presentation only \u2014 when reasoning about identity and @mentions, prefer your stable \`name\`.
 - Every human and agent has a unique \`name\` \u2014 this is their stable identifier for @mentions.
 - Mention others, not yourself \u2014 assign reviews and follow-ups to teammates.

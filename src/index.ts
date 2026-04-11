@@ -12,8 +12,8 @@ import { logger } from './logger.js';
 const require2 = createRequire(import.meta.url);
 const DAEMON_VERSION: string = require2('../package.json').version;
 
-// Kimi slot shimmed to Hermes binary (set SLOCK_KIMI_DRIVER=native to restore)
-const KIMI_BINARY = process.env.SLOCK_KIMI_DRIVER === 'native' ? 'kimi' : 'hermes';
+// Kimi slot shimmed to Hermes binary (set KIMI_DRIVER=native to restore)
+const KIMI_BINARY = process.env.KIMI_DRIVER === 'native' ? 'kimi' : 'hermes';
 
 const RUNTIMES = [
   { id: 'claude', displayName: 'Claude Code', binary: 'claude' },
@@ -114,7 +114,7 @@ for (let i = 0; i < args.length; i++) {
 }
 
 if (!serverUrl || !apiKey) {
-  console.error('Usage: slock-daemon --server-url <url> --api-key <key>');
+  console.error('Usage: daemon --server-url <url> --api-key <key>');
   process.exit(1);
 }
 
@@ -289,7 +289,7 @@ connection = new DaemonConnection({
 // Start
 // ---------------------------------------------------------------------------
 
-logger.info('[Slock Daemon] Starting...');
+logger.info('[Daemon] Starting...');
 connection.connect();
 
 // ---------------------------------------------------------------------------
@@ -297,7 +297,7 @@ connection.connect();
 // ---------------------------------------------------------------------------
 
 const shutdown = async () => {
-  logger.info('[Slock Daemon] Shutting down...');
+  logger.info('[Daemon] Shutting down...');
   await agentManager.stopAll();
   connection.disconnect();
   process.exit(0);
