@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
-import { mkdirSync, writeFileSync } from 'fs';
+import { mkdirSync, writeFileSync, copyFileSync, existsSync } from 'fs';
 import path from 'path';
+import os from 'os';
 import type { Driver, SpawnContext, ParsedEvent, AgentConfig } from './types.js';
 import { buildBaseSystemPrompt } from './systemPrompt.js';
 
@@ -23,6 +24,14 @@ export class HermesDriver implements Driver {
   spawn(ctx: SpawnContext): { process: import('child_process').ChildProcess } {
     const hermesHome = path.join(ctx.workingDirectory, '.hermes');
     mkdirSync(hermesHome, { recursive: true });
+
+    // Copy auth.json from global ~/.hermes so the per-agent HERMES_HOME
+    // doesn't trigger the "Migrating Codex credentials" prompt on first run.
+    const globalAuth = path.join(os.homedir(), '.hermes', 'auth.json');
+    const localAuth = path.join(hermesHome, 'auth.json');
+    if (existsSync(globalAuth) && !existsSync(localAuth)) {
+      copyFileSync(globalAuth, localAuth);
+    }
 
     // Build bridge invocation (mirrors Codex/Claude pattern)
     const isTsSource = ctx.chatBridgePath.endsWith('.ts');
