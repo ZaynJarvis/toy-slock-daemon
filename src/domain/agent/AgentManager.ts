@@ -13,6 +13,7 @@ import {
   MAX_TRAJECTORY_TEXT,
   TRAJECTORY_COALESCE_MS,
   ACTIVITY_HEARTBEAT_MS,
+  PROCESS_ALIVE_HEARTBEAT_MS,
   formatChannelLabel,
   formatIncomingMessage,
   buildUnreadSummary,
@@ -147,6 +148,7 @@ export class AgentProcessManager {
         notificationTimer: null,
         pendingNotificationCount: 0,
         activityHeartbeat: null,
+        processAliveTimer: null,
         lastActivity: '',
         lastActivityDetail: '',
         recentStdout: [],
@@ -221,6 +223,9 @@ export class AgentProcessManager {
           }
           if (ap.activityHeartbeat) {
             clearInterval(ap.activityHeartbeat);
+          }
+          if (ap.processAliveTimer) {
+            clearInterval(ap.processAliveTimer);
           }
 
           this.agents.delete(agentId);
@@ -301,6 +306,22 @@ export class AgentProcessManager {
 
       this.sendAgentStatus(agentId, 'active', launchId || null);
       this.broadcastActivity(agentId, 'working', 'Starting\u2026');
+
+      // Process-alive heartbeat: periodically check the process is still running
+      // and broadcast 'working' so the frontend shows the agent as alive.
+      agentProcess.processAliveTimer = setInterval(() => {
+        const current = this.agents.get(agentId);
+        if (!current || current.process.killed || current.process.exitCode !== null) {
+          if (current?.processAliveTimer) {
+            clearInterval(current.processAliveTimer);
+            current.processAliveTimer = null;
+          }
+          return;
+        }
+        if (!current.isIdle) {
+          this.broadcastActivity(agentId, 'working', 'Processing\u2026');
+        }
+      }, PROCESS_ALIVE_HEARTBEAT_MS);
     } catch (err) {
       this.agentsStarting.delete(agentId);
       throw err;
@@ -322,6 +343,9 @@ export class AgentProcessManager {
     }
     if (ap.activityHeartbeat) {
       clearInterval(ap.activityHeartbeat);
+    }
+    if (ap.processAliveTimer) {
+      clearInterval(ap.processAliveTimer);
     }
 
     this.agents.delete(agentId);

@@ -13,6 +13,7 @@ export const DATA_DIR = path.join(os.homedir(), '.slock', 'agents');
 export const MAX_TRAJECTORY_TEXT = 2000;
 export const TRAJECTORY_COALESCE_MS = 350;
 export const ACTIVITY_HEARTBEAT_MS = 60000;
+export const PROCESS_ALIVE_HEARTBEAT_MS = 15000;
 
 export const MAX_STDOUT_LINES = 8;
 export const MAX_STDOUT_LINE_LENGTH = 240;
@@ -34,6 +35,7 @@ export interface AgentProcess {
   notificationTimer: ReturnType<typeof setTimeout> | null;
   pendingNotificationCount: number;
   activityHeartbeat: ReturnType<typeof setInterval> | null;
+  processAliveTimer: ReturnType<typeof setInterval> | null;
   lastActivity: string;
   lastActivityDetail: string;
   recentStdout: string[];
