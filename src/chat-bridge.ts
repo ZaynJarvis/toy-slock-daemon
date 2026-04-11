@@ -247,7 +247,7 @@ server.tool(
       };
       const mimeType = mimeMap[ext] || "application/octet-stream";
 
-      const blob = new Blob([fileBuffer], { type: mimeType });
+      const blob = new Blob([new Uint8Array(fileBuffer)], { type: mimeType });
       const formData = new FormData();
       formData.append("file", blob, filename);
       formData.append("channelId", channelId);
@@ -306,14 +306,21 @@ server.tool(
       const existing = fs.readdirSync(cacheDir).find((f: string) => f.startsWith(attachment_id));
       if (existing) {
         const cachedPath = path.join(cacheDir, existing);
-        return {
-          content: [
-            {
-              type: "text",
-              text: `File already cached at: ${cachedPath}\n\nUse your Read tool to view this image.`,
-            },
-          ],
-        };
+        // Validate cached file is actual binary image data, not corrupted JSON
+        const cachedBuf = fs.readFileSync(cachedPath);
+        if (cachedBuf.length > 0 && cachedBuf[0] === 0x7b) {
+          // File starts with '{' — likely corrupted JSON serialization, delete and re-download
+          fs.unlinkSync(cachedPath);
+        } else {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `File already cached at: ${cachedPath}\n\nUse your Read tool to view this image.`,
+              },
+            ],
+          };
+        }
       }
 
       const downloadHeaders: Record<string, string> = {};
@@ -346,6 +353,20 @@ server.tool(
       const filePath = path.join(cacheDir, `${attachment_id}${ext}`);
 
       const buffer = Buffer.from(await res.arrayBuffer());
+
+      // Validate the downloaded data is actual binary, not JSON-serialized buffer
+      if (buffer.length > 0 && buffer[0] === 0x7b) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Error: Downloaded file appears corrupted (received JSON text instead of binary image data). The upload may have failed. Cannot view this attachment.`,
+            },
+          ],
+        };
+      }
+
       fs.writeFileSync(filePath, buffer);
 
       return {
