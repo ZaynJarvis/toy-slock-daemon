@@ -4,8 +4,12 @@ import path from 'path';
 import type { Driver, SpawnContext, ParsedEvent, AgentConfig } from './types.js';
 import { buildBaseSystemPrompt } from './systemPrompt.js';
 
-function inferProvider(model: string | undefined): string {
-  if (!model) return 'anthropic';
+function resolveModel(model: string | undefined): string {
+  if (!model || model === 'default') return 'claude-sonnet-4-5';
+  return model;
+}
+
+function inferProvider(model: string): string {
   if (model.startsWith('gemini-') || model.startsWith('google/')) return 'gemini';
   if (model.startsWith('gpt-') || /^o\d/.test(model)) return 'openai-codex';
   return 'anthropic';
@@ -28,12 +32,13 @@ export class HermesDriver implements Driver {
       : [ctx.chatBridgePath, '--agent-id', ctx.agentId, '--server-url', ctx.config.serverUrl, '--auth-token', ctx.config.authToken || ctx.daemonApiKey];
 
     // Write config.yaml before spawn — isolated HERMES_HOME has no config by default
-    const provider = inferProvider(ctx.config.model);
+    const model = resolveModel(ctx.config.model);
+    const provider = inferProvider(model);
     const argsYaml = bridgeArgs.map(a => `      - ${JSON.stringify(a)}`).join('\n');
     const configYaml = [
       'config_version: 14',
       'model:',
-      `  default: ${ctx.config.model || 'claude-sonnet-4-5'}`,
+      `  default: ${model}`,
       `  provider: ${provider}`,
       'mcp_servers:',
       '  chat:',
