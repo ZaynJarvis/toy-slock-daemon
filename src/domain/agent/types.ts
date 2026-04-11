@@ -142,9 +142,14 @@ export function summarizeCrash(code: number | null, signal: string | null): stri
 }
 
 export function isMissingResumeSession(ap: AgentProcess): boolean {
-  if (ap.driver.id !== 'claude') return false;
   if (!ap.sessionId) return false;
-  return /No conversation found with session ID/i.test(ap.lastRuntimeError || '');
+  if (ap.driver.id === 'claude') {
+    return /No conversation found with session ID/i.test(ap.lastRuntimeError || '');
+  }
+  if (ap.driver.id === 'hermes') {
+    return /^Session not found:/i.test(ap.lastRuntimeError || '');
+  }
+  return false;
 }
 
 export function getMessageDeliveryText(supportsStdinNotification: boolean): string {
