@@ -1,5 +1,5 @@
 import { spawn } from 'child_process';
-import { mkdirSync, writeFileSync, copyFileSync, existsSync } from 'fs';
+import { mkdirSync, writeFileSync, copyFileSync, existsSync, readFileSync, symlinkSync, lstatSync, readlinkSync } from 'fs';
 import path from 'path';
 import os from 'os';
 import type { Driver, SpawnContext, ParsedEvent, AgentConfig } from './types.js';
@@ -25,12 +25,34 @@ export class HermesDriver implements Driver {
     const hermesHome = path.join(ctx.workingDirectory, '.hermes');
     mkdirSync(hermesHome, { recursive: true });
 
-    // Copy auth.json from global ~/.hermes so the per-agent HERMES_HOME
-    // doesn't trigger the "Migrating Codex credentials" prompt on first run.
-    const globalAuth = path.join(os.homedir(), '.hermes', 'auth.json');
+    // Sync global ~/.hermes files into per-agent HERMES_HOME.
+    // Use symlinks where possible (single source of truth); fall back to copy.
+    // auth.json is copied (not symlinked) because hermes may write back to it.
+    const globalHermes = path.join(os.homedir(), '.hermes');
+
+    const globalAuth = path.join(globalHermes, 'auth.json');
     const localAuth = path.join(hermesHome, 'auth.json');
     if (existsSync(globalAuth) && !existsSync(localAuth)) {
       copyFileSync(globalAuth, localAuth);
+    }
+
+    // Symlink shared read-only resources from global ~/.hermes
+    const symlinkTargets = ['SOUL.md', 'skills', '.skills_prompt_snapshot.json', 'memories'];
+    for (const name of symlinkTargets) {
+      const globalPath = path.join(globalHermes, name);
+      const localPath = path.join(hermesHome, name);
+      if (existsSync(globalPath) && !existsSync(localPath)) {
+        try {
+          symlinkSync(globalPath, localPath);
+        } catch {
+          // Symlink failed (e.g. permissions); try copy for files, skip dirs
+          try {
+            if (!lstatSync(globalPath).isDirectory()) {
+              copyFileSync(globalPath, localPath);
+            }
+          } catch { /* skip */ }
+        }
+      }
     }
 
     // Build bridge invocation (mirrors Codex/Claude pattern)
@@ -40,12 +62,24 @@ export class HermesDriver implements Driver {
       ? ['tsx', ctx.chatBridgePath, '--agent-id', ctx.agentId, '--server-url', ctx.config.serverUrl, '--auth-token', ctx.config.authToken || ctx.daemonApiKey]
       : [ctx.chatBridgePath, '--agent-id', ctx.agentId, '--server-url', ctx.config.serverUrl, '--auth-token', ctx.config.authToken || ctx.daemonApiKey];
 
-    // Write config.yaml before spawn — isolated HERMES_HOME has no config by default
+    // Build config.yaml by merging global config with our model/MCP overrides.
+    // This preserves all hermes settings (memory, compression, personalities, etc.)
+    // while adding daemon-specific model and chat-bridge MCP configuration.
     const model = resolveModel(ctx.config.model);
     const provider = inferProvider(model);
     const argsYaml = bridgeArgs.map(a => `      - ${JSON.stringify(a)}`).join('\n');
-    const configYaml = [
-      'config_version: 14',
+
+    const globalConfigPath = path.join(globalHermes, 'config.yaml');
+    let baseConfig = '';
+    if (existsSync(globalConfigPath)) {
+      baseConfig = readFileSync(globalConfigPath, 'utf8');
+      // Strip model section (we override it)
+      baseConfig = baseConfig.replace(/^model:\n(?:[ \t]+.*\n)*/m, '');
+      // Strip existing mcp_servers section (we inject our chat bridge)
+      baseConfig = baseConfig.replace(/^mcp_servers:\n(?:[ \t]+.*\n)*/m, '');
+    }
+
+    const overrides = [
       'model:',
       `  default: ${model}`,
       `  provider: ${provider}`,
@@ -58,7 +92,7 @@ export class HermesDriver implements Driver {
       '    timeout: 300',
     ].join('\n');
 
-    writeFileSync(path.join(hermesHome, 'config.yaml'), configYaml, 'utf8');
+    writeFileSync(path.join(hermesHome, 'config.yaml'), overrides + '\n' + baseConfig, 'utf8');
 
     // Build hermes chat args
     const args = ['chat', '-q', ctx.prompt, '-Q', '--source', 'tool', '--yolo'];
