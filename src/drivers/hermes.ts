@@ -5,7 +5,7 @@ import type { Driver, SpawnContext, ParsedEvent, AgentConfig } from './types.js'
 import { buildBaseSystemPrompt } from './systemPrompt.js';
 
 function resolveModel(model: string | undefined): string {
-  if (!model || model === 'default') return 'claude-sonnet-4-5';
+  if (!model || model === 'default') return 'gpt-5.4';
   return model;
 }
 
