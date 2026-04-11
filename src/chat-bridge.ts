@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { buildFetchDispatcher } from "./proxy.js";
 
 function toLocalTime(iso: string): string {
   const d = new Date(iso);
@@ -28,6 +29,12 @@ if (!agentId) {
 const commonHeaders: Record<string, string> = { "Content-Type": "application/json" };
 if (authToken) {
   commonHeaders["Authorization"] = `Bearer ${authToken}`;
+}
+
+function bridgeFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  const dispatcher = buildFetchDispatcher(url, process.env as Record<string, string | undefined>);
+  const requestInit = dispatcher ? { ...init, dispatcher } : init;
+  return fetch(url, requestInit as any);
 }
 
 interface MessageRecord {
@@ -139,7 +146,7 @@ server.tool(
   },
   async ({ target, content, attachment_ids }) => {
     try {
-      const res = await fetch(`${serverUrl}/internal/agent/${agentId}/send`, {
+      const res = await bridgeFetch(`${serverUrl}/internal/agent/${agentId}/send`, {
         method: "POST",
         headers: commonHeaders,
         body: JSON.stringify({ target, content, attachmentIds: attachment_ids }),
@@ -211,7 +218,7 @@ server.tool(
         };
       }
 
-      const listRes = await fetch(`${serverUrl}/internal/agent/${agentId}/resolve-channel`, {
+      const listRes = await bridgeFetch(`${serverUrl}/internal/agent/${agentId}/resolve-channel`, {
         method: "POST",
         headers: commonHeaders,
         body: JSON.stringify({ target: channel }),
@@ -250,7 +257,7 @@ server.tool(
         uploadHeaders["Authorization"] = `Bearer ${authToken}`;
       }
 
-      const res = await fetch(`${serverUrl}/internal/agent/${agentId}/upload`, {
+      const res = await bridgeFetch(`${serverUrl}/internal/agent/${agentId}/upload`, {
         method: "POST",
         headers: uploadHeaders,
         body: formData,
@@ -314,7 +321,7 @@ server.tool(
         downloadHeaders["Authorization"] = `Bearer ${authToken}`;
       }
 
-      const res = await fetch(`${serverUrl}/api/attachments/${attachment_id}`, {
+      const res = await bridgeFetch(`${serverUrl}/api/attachments/${attachment_id}`, {
         headers: downloadHeaders,
         redirect: "follow",
       });
@@ -364,7 +371,7 @@ server.tool(
   {},
   async () => {
     try {
-      const res = await fetch(`${serverUrl}/internal/agent/${agentId}/receive`, {
+      const res = await bridgeFetch(`${serverUrl}/internal/agent/${agentId}/receive`, {
         method: "GET",
         headers: commonHeaders,
       });
@@ -397,7 +404,7 @@ server.tool(
   {},
   async () => {
     try {
-      const res = await fetch(`${serverUrl}/internal/agent/${agentId}/server`, {
+      const res = await bridgeFetch(`${serverUrl}/internal/agent/${agentId}/server`, {
         method: "GET",
         headers: commonHeaders,
       });
@@ -496,7 +503,7 @@ server.tool(
       if (after) params.set("after", after);
       if (before) params.set("before", before);
 
-      const res = await fetch(`${serverUrl}/internal/agent/${agentId}/search?${params}`, {
+      const res = await bridgeFetch(`${serverUrl}/internal/agent/${agentId}/search?${params}`, {
         method: "GET",
         headers: commonHeaders,
       });
@@ -587,7 +594,7 @@ server.tool(
       if (before) params.set("before", String(before));
       if (after) params.set("after", String(after));
 
-      const res = await fetch(`${serverUrl}/internal/agent/${agentId}/history?${params}`, {
+      const res = await bridgeFetch(`${serverUrl}/internal/agent/${agentId}/history?${params}`, {
         method: "GET",
         headers: commonHeaders,
       });
@@ -680,7 +687,7 @@ server.tool(
       params.set("channel", channel);
       if (status !== "all") params.set("status", status);
 
-      const res = await fetch(`${serverUrl}/internal/agent/${agentId}/tasks?${params}`, {
+      const res = await bridgeFetch(`${serverUrl}/internal/agent/${agentId}/tasks?${params}`, {
         method: "GET",
         headers: commonHeaders,
       });
@@ -747,7 +754,7 @@ server.tool(
   },
   async ({ channel, tasks }) => {
     try {
-      const res = await fetch(`${serverUrl}/internal/agent/${agentId}/tasks`, {
+      const res = await bridgeFetch(`${serverUrl}/internal/agent/${agentId}/tasks`, {
         method: "POST",
         headers: commonHeaders,
         body: JSON.stringify({ channel, tasks }),
@@ -821,7 +828,7 @@ Thread messages cannot be claimed or converted into tasks. If a task is in "todo
       if (task_numbers && task_numbers.length > 0) body.task_numbers = task_numbers;
       if (message_ids && message_ids.length > 0) body.message_ids = message_ids;
 
-      const res = await fetch(`${serverUrl}/internal/agent/${agentId}/tasks/claim`, {
+      const res = await bridgeFetch(`${serverUrl}/internal/agent/${agentId}/tasks/claim`, {
         method: "POST",
         headers: commonHeaders,
         body: JSON.stringify(body),
@@ -882,7 +889,7 @@ server.tool(
   },
   async ({ channel, task_number }) => {
     try {
-      const res = await fetch(`${serverUrl}/internal/agent/${agentId}/tasks/unclaim`, {
+      const res = await bridgeFetch(`${serverUrl}/internal/agent/${agentId}/tasks/unclaim`, {
         method: "POST",
         headers: commonHeaders,
         body: JSON.stringify({ channel, task_number }),
@@ -918,7 +925,7 @@ server.tool(
   },
   async ({ channel, task_number, status }) => {
     try {
-      const res = await fetch(`${serverUrl}/internal/agent/${agentId}/tasks/update-status`, {
+      const res = await bridgeFetch(`${serverUrl}/internal/agent/${agentId}/tasks/update-status`, {
         method: "POST",
         headers: commonHeaders,
         body: JSON.stringify({ channel, task_number, status }),

@@ -223,11 +223,6 @@ connection = new DaemonConnection({
         connection.send({ type: 'pong' });
         break;
 
-      case 'agent:reset-workspace':
-        logger.info(`[Agent ${msg.agentId}] Workspace reset requested`);
-        agentManager.resetWorkspace(msg.agentId);
-        break;
-
       case 'agent:workspace:list':
         agentManager.getFileTree(msg.agentId, msg.dirPath).then((files) => {
           connection.send({ type: 'agent:workspace:file_tree', agentId: msg.agentId, files, dirPath: msg.dirPath });
