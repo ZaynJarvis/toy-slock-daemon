@@ -6,7 +6,7 @@ import { execSync } from 'child_process';
 import { accessSync } from 'fs';
 
 import { DaemonConnection } from './connection.js';
-import { AgentProcessManager } from './agentProcessManager.js';
+import { AgentProcessManager } from './domain/agent/AgentManager.js';
 import { logger } from './logger.js';
 
 const require2 = createRequire(import.meta.url);
