@@ -14,6 +14,7 @@ import {
   TRAJECTORY_COALESCE_MS,
   ACTIVITY_HEARTBEAT_MS,
   PROCESS_ALIVE_HEARTBEAT_MS,
+  AGENT_STARTUP_TIMEOUT_MS,
   formatChannelLabel,
   formatIncomingMessage,
   buildUnreadSummary,
@@ -202,7 +203,28 @@ export class AgentProcessManager {
         logger.error(`[Agent ${agentId} stderr]: ${text}`);
       });
 
+      // Startup timeout — kill process if no stdout within AGENT_STARTUP_TIMEOUT_MS
+      const startupTimeout = setTimeout(() => {
+        const current = this.agents.get(agentId);
+        if (current && current.recentStdout.length === 0) {
+          logger.error(`[Agent ${agentId}] Startup timed out after ${AGENT_STARTUP_TIMEOUT_MS}ms — killing process`);
+          proc.kill('SIGTERM');
+          this.sendToServer({
+            type: 'agent:activity',
+            agentId,
+            activity: 'offline',
+            detail: `Startup timed out after ${AGENT_STARTUP_TIMEOUT_MS / 1000}s`,
+            launchId: launchId || undefined,
+          });
+        }
+      }, AGENT_STARTUP_TIMEOUT_MS);
+
+      // Clear startup timeout once we get first stdout
+      proc.stdout?.once('data', () => clearTimeout(startupTimeout));
+      proc.on('close', () => clearTimeout(startupTimeout));
+
       proc.on('error', (err: Error) => {
+        clearTimeout(startupTimeout);
         const current = this.agents.get(agentId);
         if (current) current.spawnError = err.message;
         logger.error(`[Agent ${agentId}] Process error: ${err.message}`);

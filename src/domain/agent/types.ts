@@ -14,6 +14,7 @@ export const MAX_TRAJECTORY_TEXT = 2000;
 export const TRAJECTORY_COALESCE_MS = 350;
 export const ACTIVITY_HEARTBEAT_MS = 60000;
 export const PROCESS_ALIVE_HEARTBEAT_MS = 15000;
+export const AGENT_STARTUP_TIMEOUT_MS = 30000; // 30s max for agent process to spawn
 
 export const MAX_STDOUT_LINES = 8;
 export const MAX_STDOUT_LINE_LENGTH = 240;

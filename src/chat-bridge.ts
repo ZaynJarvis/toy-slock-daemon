@@ -31,6 +31,8 @@ if (authToken) {
   commonHeaders["Authorization"] = `Bearer ${authToken}`;
 }
 
+const FETCH_TIMEOUT_MS = 60_000; // 60s per-request timeout
+
 async function bridgeFetch(url: string, init: RequestInit = {}): Promise<Response> {
   const dispatcher = buildFetchDispatcher(url, process.env as Record<string, string | undefined>);
   const requestInit = dispatcher ? { ...init, dispatcher } : init;
@@ -39,7 +41,22 @@ async function bridgeFetch(url: string, init: RequestInit = {}): Promise<Respons
   const baseDelayMs = 1000;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const res = await fetch(url, requestInit as any);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+    let res: Response;
+    try {
+      res = await fetch(url, { ...requestInit, signal: controller.signal } as any);
+    } catch (err: any) {
+      clearTimeout(timeout);
+      if (err?.name === 'AbortError') {
+        if (attempt >= maxRetries) throw new Error(`Request timed out after ${FETCH_TIMEOUT_MS}ms: ${url}`);
+        await new Promise((resolve) => setTimeout(resolve, baseDelayMs * Math.pow(2, attempt)));
+        continue;
+      }
+      throw err;
+    }
+    clearTimeout(timeout);
 
     if (res.status === 429 || res.status >= 500) {
       if (attempt >= maxRetries) return res;

@@ -305,3 +305,17 @@ const shutdown = async () => {
 
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
+
+// ---------------------------------------------------------------------------
+// Global error handlers — prevent silent crashes on unhandled errors
+// ---------------------------------------------------------------------------
+
+process.on('unhandledRejection', (reason) => {
+  logger.error(`[Daemon] Unhandled promise rejection: ${reason instanceof Error ? reason.stack || reason.message : String(reason)}`);
+});
+
+process.on('uncaughtException', (err) => {
+  logger.error(`[Daemon] Uncaught exception: ${err.stack || err.message}`);
+  // Give time for logs to flush, then exit non-zero
+  setTimeout(() => process.exit(1), 500);
+});
