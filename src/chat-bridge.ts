@@ -31,9 +31,39 @@ if (authToken) {
   commonHeaders["Authorization"] = `Bearer ${authToken}`;
 }
 
-function bridgeFetch(url: string, init: RequestInit = {}): Promise<Response> {
+async function bridgeFetch(url: string, init: RequestInit = {}): Promise<Response> {
   const dispatcher = buildFetchDispatcher(url, process.env as Record<string, string | undefined>);
   const requestInit = dispatcher ? { ...init, dispatcher } : init;
+
+  const maxRetries = 3;
+  const baseDelayMs = 1000;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const res = await fetch(url, requestInit as any);
+
+    if (res.status === 429 || res.status >= 500) {
+      if (attempt >= maxRetries) return res;
+
+      const retryAfter = res.headers.get("retry-after");
+      let delayMs: number;
+      if (retryAfter) {
+        const parsed = Number(retryAfter);
+        // Retry-After can be seconds or an HTTP-date
+        delayMs = isNaN(parsed)
+          ? Math.max(0, new Date(retryAfter).getTime() - Date.now())
+          : parsed * 1000;
+      } else {
+        delayMs = baseDelayMs * Math.pow(2, attempt); // 1s → 2s → 4s
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      continue;
+    }
+
+    return res;
+  }
+
+  // Unreachable, but satisfies TypeScript
   return fetch(url, requestInit as any);
 }
 
@@ -151,7 +181,7 @@ server.tool(
         headers: commonHeaders,
         body: JSON.stringify({ target, content, attachmentIds: attachment_ids }),
       });
-      const data = await res.json();
+      const data: any = await res.json().catch(() => ({}));
       if (!res.ok) {
         return {
           content: [{ type: "text", text: `Error: ${data.error}` }],
@@ -262,7 +292,7 @@ server.tool(
         headers: uploadHeaders,
         body: formData,
       });
-      const data = await res.json();
+      const data: any = await res.json().catch(() => ({}));
       if (!res.ok) {
         return {
           isError: true,
@@ -429,7 +459,7 @@ server.tool(
         method: "GET",
         headers: commonHeaders,
       });
-      const data = await res.json();
+      const data: any = await res.json().catch(() => ({}));
 
       let text = "## Server\n\n";
       text += "### Channels\n";
@@ -528,7 +558,7 @@ server.tool(
         method: "GET",
         headers: commonHeaders,
       });
-      const data = await res.json();
+      const data: any = await res.json().catch(() => ({}));
       if (!res.ok) {
         return {
           content: [{ type: "text", text: `Error: ${data.error}` }],
@@ -619,7 +649,7 @@ server.tool(
         method: "GET",
         headers: commonHeaders,
       });
-      const data = await res.json();
+      const data: any = await res.json().catch(() => ({}));
       if (!res.ok) {
         return {
           content: [{ type: "text", text: `Error: ${data.error}` }],
@@ -712,7 +742,7 @@ server.tool(
         method: "GET",
         headers: commonHeaders,
       });
-      const data = await res.json();
+      const data: any = await res.json().catch(() => ({}));
       if (!res.ok) {
         return {
           isError: true,
@@ -780,7 +810,7 @@ server.tool(
         headers: commonHeaders,
         body: JSON.stringify({ channel, tasks }),
       });
-      const data = await res.json();
+      const data: any = await res.json().catch(() => ({}));
       if (!res.ok) {
         return {
           isError: true,
@@ -854,7 +884,7 @@ Thread messages cannot be claimed or converted into tasks. If a task is in "todo
         headers: commonHeaders,
         body: JSON.stringify(body),
       });
-      const data = await res.json();
+      const data: any = await res.json().catch(() => ({}));
       if (!res.ok) {
         return {
           isError: true,
@@ -915,7 +945,7 @@ server.tool(
         headers: commonHeaders,
         body: JSON.stringify({ channel, task_number }),
       });
-      const data = await res.json();
+      const data: any = await res.json().catch(() => ({}));
       if (!res.ok) {
         return {
           isError: true,
@@ -951,7 +981,7 @@ server.tool(
         headers: commonHeaders,
         body: JSON.stringify({ channel, task_number, status }),
       });
-      const data = await res.json();
+      const data: any = await res.json().catch(() => ({}));
       if (!res.ok) {
         return {
           isError: true,
