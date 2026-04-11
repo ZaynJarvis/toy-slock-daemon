@@ -17,6 +17,7 @@ const RUNTIMES = [
   { id: 'codex', displayName: 'Codex CLI', binary: 'codex' },
   { id: 'kimi', displayName: 'Kimi CLI', binary: 'kimi' },
   { id: 'gemini', displayName: 'Gemini CLI', binary: 'gemini' },
+  { id: 'hermes', displayName: 'Hermes Agent', binary: 'hermes' },
 ];
 
 // ---------------------------------------------------------------------------
