@@ -347,6 +347,7 @@ server.tool(
       const path = await import("path");
       const os = await import("os");
 
+      // Keep in sync with ZOUK_HOME in domain/agent/types.ts (separate tsup entry point, can't import)
       const zoukHome = process.env.ZOUK_HOME || path.join(os.homedir(), ".zouk");
       const cacheDir = path.join(zoukHome, "attachments");
       fs.mkdirSync(cacheDir, { recursive: true });
