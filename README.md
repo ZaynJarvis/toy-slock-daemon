@@ -52,6 +52,7 @@ The daemon auto-detects installed runtimes and reports them to the server on con
 | `WS_PROXY` / `ws_proxy` | Proxy specifically for WS connections |
 | `ALL_PROXY` / `all_proxy` | Fallback proxy for all protocols |
 | `NO_PROXY` / `no_proxy` | Comma-separated list of hosts to bypass proxy |
+| `ZOUK_HOME` | Override workspace root directory (default: `~/.zouk`) |
 
 ## Development
 

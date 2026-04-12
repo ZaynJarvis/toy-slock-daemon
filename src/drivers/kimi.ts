@@ -6,9 +6,9 @@ import type { Driver, SpawnContext, ParsedEvent, AgentConfig } from './types.js'
 import { buildBaseSystemPrompt } from './systemPrompt.js';
 
 const KIMI_WIRE_PROTOCOL_VERSION = '1.3';
-const KIMI_SYSTEM_PROMPT_FILE = '.slock-kimi-system.md';
-const KIMI_AGENT_FILE = '.slock-kimi-agent.yaml';
-const KIMI_MCP_FILE = '.slock-kimi-mcp.json';
+const KIMI_SYSTEM_PROMPT_FILE = '.zouk-kimi-system.md';
+const KIMI_AGENT_FILE = '.zouk-kimi-agent.yaml';
+const KIMI_MCP_FILE = '.zouk-kimi-mcp.json';
 
 function parseToolArguments(raw: any): any {
   if (typeof raw !== 'string') return raw;

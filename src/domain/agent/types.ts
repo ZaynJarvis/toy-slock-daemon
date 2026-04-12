@@ -8,7 +8,8 @@ import type { Driver, AgentConfig } from '../../drivers/types.js';
 import path from 'path';
 import os from 'os';
 
-export const DATA_DIR = path.join(os.homedir(), '.slock', 'agents');
+export const ZOUK_HOME = process.env.ZOUK_HOME || path.join(os.homedir(), '.zouk');
+export const DATA_DIR = path.join(ZOUK_HOME, 'agents');
 
 export const MAX_TRAJECTORY_TEXT = 2000;
 export const TRAJECTORY_COALESCE_MS = 350;
