@@ -30,7 +30,10 @@ export class WorkspaceService {
       throw new Error('Access denied');
     }
     const info = await stat(resolved);
-    if (info.isDirectory()) throw new Error('Cannot read a directory');
+    if (info.isDirectory()) {
+      const children = await this.listDirectoryChildren(resolved, agentDir);
+      return { content: JSON.stringify(children, null, 2), binary: false };
+    }
 
     const TEXT_EXTENSIONS = new Set([
       '.md', '.txt', '.json', '.js', '.ts', '.jsx', '.tsx',
