@@ -85,17 +85,10 @@ export class HermesDriver implements Driver {
       baseConfig = baseConfig.replace(/^mcp_servers:\n(?:[ \t]+.*\n)*/m, '');
     }
 
-    // Pick a fallback model on a different provider so 429 on primary doesn't kill the agent
-    const fallbackModel = provider === 'gemini' ? 'gpt-5.4' : 'gemini-2.5-flash';
-    const fallbackProvider = provider === 'gemini' ? 'openai-codex' : 'gemini';
-
     const overrides = [
       'model:',
       `  default: ${model}`,
       `  provider: ${provider}`,
-      'fallback_model:',
-      `  provider: ${fallbackProvider}`,
-      `  model: ${fallbackModel}`,
       'mcp_servers:',
       '  chat:',
       `    command: ${JSON.stringify(bridgeCommand)}`,
