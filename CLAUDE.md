@@ -41,14 +41,48 @@ src/
 - **Idle cache**: When an agent's turn ends (exit 0), its config and session ID are cached. New messages auto-restart it with the cached session.
 - **Driver abstraction**: Each runtime (claude/codex/kimi) implements the `Driver` interface for spawn args, output parsing, and stdin encoding.
 
-## Development
+## Build & Run
 
 ```bash
+# Install dependencies
 npm install
-npm run build          # tsup — builds dist/index.js + dist/chat-bridge.js
-npm run dev            # tsx watch mode
-npm test               # node --test
+
+# Build (produces dist/index.js + dist/chat-bridge.js)
+npm run build
+
+# Run locally (dev mode with hot-reload)
+npm run dev -- --server-url <url> --api-key <key>
+
+# Run production build
+node dist/index.js --server-url <url> --api-key <key>
+
+# Typecheck
+npm run typecheck
 ```
+
+## Connect to Cloud (Zouk production)
+
+The daemon connects to the Zouk server via WebSocket. To connect to the cloud instance:
+
+```bash
+# Using the dev build
+npm run dev -- --server-url https://api.slock.ai --api-key <your-machine-api-key>
+
+# Using the production build
+node dist/index.js --server-url https://api.slock.ai --api-key <your-machine-api-key>
+```
+
+The API key is a machine-level key (format: `sk_machine_...`) issued by the server admin.
+Get yours from the Zouk web UI or ask the project owner.
+
+## Using with Claude Code
+
+To run the daemon as a Claude Code subprocess (how agents are spawned in production):
+
+1. Build the daemon: `npm run build`
+2. The daemon spawns Claude Code processes with `--mcp-config` pointing to `dist/chat-bridge.js`
+3. Agent workspaces live in `~/.zouk/agents/{agentId}/` (override with `ZOUK_HOME` env var)
+4. Each agent gets its own working directory with `MEMORY.md`, `notes/`, and driver config files
 
 ## Commit Conventions
 
