@@ -347,7 +347,8 @@ server.tool(
       const path = await import("path");
       const os = await import("os");
 
-      const cacheDir = path.join(os.homedir(), ".slock", "attachments");
+      const zoukHome = process.env.ZOUK_HOME || path.join(os.homedir(), ".zouk");
+      const cacheDir = path.join(zoukHome, "attachments");
       fs.mkdirSync(cacheDir, { recursive: true });
 
       const existing = fs.readdirSync(cacheDir).find((f: string) => f.startsWith(attachment_id));

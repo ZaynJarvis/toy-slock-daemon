@@ -3,10 +3,11 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import os from 'os';
 import { execSync } from 'child_process';
-import { accessSync } from 'fs';
+import { accessSync, existsSync, renameSync, mkdirSync } from 'fs';
 
 import { DaemonConnection } from './connection.js';
 import { AgentProcessManager } from './domain/agent/AgentManager.js';
+import { ZOUK_HOME } from './domain/agent/types.js';
 import { logger } from './logger.js';
 
 const require2 = createRequire(import.meta.url);
@@ -116,6 +117,23 @@ for (let i = 0; i < args.length; i++) {
 if (!serverUrl || !apiKey) {
   console.error('Usage: daemon --server-url <url> --api-key <key>');
   process.exit(1);
+}
+
+// ---------------------------------------------------------------------------
+// Migrate from legacy ~/.slock to ~/.zouk (one-time, best-effort)
+// ---------------------------------------------------------------------------
+
+{
+  const legacyHome = path.join(os.homedir(), '.slock');
+  if (existsSync(legacyHome) && !existsSync(ZOUK_HOME)) {
+    try {
+      renameSync(legacyHome, ZOUK_HOME);
+      logger.info(`[Daemon] Migrated workspace: ${legacyHome} → ${ZOUK_HOME}`);
+    } catch (err) {
+      logger.warn(`[Daemon] Could not migrate ${legacyHome} → ${ZOUK_HOME}: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+  mkdirSync(ZOUK_HOME, { recursive: true });
 }
 
 // ---------------------------------------------------------------------------

@@ -61,4 +61,4 @@ npm test               # node --test
 - `chat-bridge.ts` filename must not change — tsup entry point config and runtime path resolution depend on it
 - Protocol message types must match the server's expected protocol exactly
 - The `ready` message capabilities array must only contain: `agent:start`, `agent:stop`, `agent:deliver`, `workspace:files`
-- Agent workspace data lives in `~/.slock/agents/{agentId}/`
+- Agent workspace data lives in `~/.zouk/agents/{agentId}/` (override with `ZOUK_HOME` env var)

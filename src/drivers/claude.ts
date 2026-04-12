@@ -30,7 +30,7 @@ export class ClaudeDriver implements Driver {
     });
     let mcpConfigArg: string;
     if (process.platform === 'win32') {
-      const mcpConfigPath = path.join(ctx.workingDirectory, '.slock-claude-mcp.json');
+      const mcpConfigPath = path.join(ctx.workingDirectory, '.zouk-claude-mcp.json');
       writeFileSync(mcpConfigPath, mcpConfig, 'utf8');
       mcpConfigArg = mcpConfigPath;
     } else {
